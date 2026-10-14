@@ -1,0 +1,13 @@
+{
+  "name": "cisdf-exam-simulator",
+  "version": "1.1.0",
+  "description": "Symulator egzaminu ServiceNow CIS-DF — Node.js bez zależności, pytania w formacie LearnWise",
+  "main": "server.js",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT"
+}

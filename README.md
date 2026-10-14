@@ -1,7 +1,7 @@
 # CIS-DF Exam Simulator
 
 Lekki symulator egzaminów certyfikacyjnych (pisany pod ServiceNow CIS-DF, ale działa z dowolnym zestawem pytań).
-Jeden plik serwera w Node.js i jedna strona HTML — bez `npm install`, bez bazy danych.
+Node.js bez żadnych zależności i jedna strona HTML — bez `npm install`, bez bazy danych. Kod podzielony na warstwy, pokryty testami (`npm test`).
 
 *A lightweight, dependency-free exam simulator (Node.js + single HTML page). Questions are plain Markdown files in LearnWise format.*
 
@@ -27,7 +27,7 @@ cp .env.example .env      # ustaw APP_PASSWORD i PORT
 ./start.sh                # start w tle; restart: ./start.sh, stop: ./start.sh stop
 ```
 
-Albo bez skryptu: `APP_PASSWORD=haslo PORT=3000 node server.js` i wejdź na `http://localhost:3000`.
+Albo bez skryptu: `APP_PASSWORD=haslo PORT=3000 npm start` i wejdź na `http://localhost:3000`.
 
 Zmienne środowiskowe: `APP_PASSWORD` (wymagane), `PORT` (domyślnie 3000), `DURATION_MIN` (90), `PASS_PCT` (80), `QUESTIONS_DIR`, `DATA_DIR`.
 
@@ -52,12 +52,64 @@ Dopasuj elementy
 Więcej odpowiedzi z `+` = pytanie wielokrotnego wyboru. Obrazki wrzuć do `questions/img/`.
 W repo jest tylko `questions/cis_df_przyklad.md` z kilkoma przykładowymi pytaniami — własne arkusze dodaj obok i zrestartuj serwer.
 
-## Struktura
+## Architektura
+
+Kod jest podzielony na warstwy — każda zna tylko te pod sobą, a logika biznesowa nie wie nic o HTTP:
 
 ```
-server.js          serwer HTTP, parser pytań, ocena, API
-public/index.html  cały interfejs (vanilla JS)
+                ┌──────────────────────────────────────────────┐
+ przeglądarka ─▶│ http.js   routing, JSON, pliki statyczne     │  warstwa HTTP
+                ├──────────────────────┬───────────────────────┤
+                │ auth.js  hasło,      │ attempts.js  podejścia│  logika
+                │ ciasteczko HMAC      │ tryby, ocena, statyst.│
+                ├──────────────────────┼───────────────────────┤
+                │                      │ grading.js  czyste    │  reguły oceny
+                │                      │ funkcje oceny         │
+                ├──────────────────────┼───────────────────────┤
+                │ store.js  db.json    │ questions.js  parser  │  dane
+                └──────────────────────┴───────────────────────┘
+   app.js składa warstwy w całość, server.js tylko uruchamia nasłuch
+```
+
+| Plik | Odpowiedzialność |
+|---|---|
+| `server.js` | punkt wejścia: konfiguracja → `createApp` → `listen` |
+| `src/config.js` | zmienne środowiskowe i wartości domyślne |
+| `src/app.js` | kompozycja zależności (łatwa podmiana w testach: katalogi, zegar) |
+| `src/http.js` | trasy API (lista w komentarzu na górze pliku), zamiana `AppError` na kod HTTP |
+| `src/auth.js` | logowanie jednym hasłem, sesja w podpisanym ciasteczku, opóźnienie po złym haśle |
+| `src/attempts.js` | tworzenie podejść, odpowiedzi, Zatwierdź (nauka), reset, ocena, limit czasu, powtórka błędów, statystyki |
+| `src/grading.js` | czy odpowiedź jest poprawna, feedback, pytanie bez klucza dla przeglądarki |
+| `src/questions.js` | parser formatu LearnWise i wczytywanie arkuszy |
+| `src/store.js` | baza w jednym pliku JSON z atomowym zapisem |
+| `public/index.html` · `style.css` · `app.js` | interfejs (vanilla JS, bez frameworka) |
+
+Każda funkcja ma komentarz JSDoc z opisem parametrów — edytor (VS Code) podpowiada typy bez TypeScriptu.
+
+## Testy
+
+```bash
+npm test        # = node --test test/*.test.js   (wbudowany runner Node.js, zero zależności)
+```
+
+| Plik | Co sprawdza |
+|---|---|
+| `test/questions.test.js` | parser: konfiguracja, odpowiedzi, JSON, wielolinijkowa treść, typy pytań, klucz treści |
+| `test/grading.test.js` | ocena single / multi / matching, feedback, brak klucza w danych dla przeglądarki |
+| `test/attempts.test.js` | tryby nauka / egzamin, Zatwierdź i blokada zmiany, reset, limit czasu (sterowany zegar), powtórka błędów, statystyki |
+| `test/http.test.js` | end-to-end: prawdziwy serwer na losowym porcie, logowanie, pełny przebieg podejścia, kody błędów |
+
+Testy działają na tymczasowych katalogach — nie dotykają `data/` ani Twoich pytań.
+
+## Struktura katalogów
+
+```
+server.js          punkt wejścia
+src/               warstwy aplikacji (opis wyżej)
+public/            interfejs: index.html, style.css, app.js
+test/              testy node:test (+ helpers.js)
 questions/         arkusze .md (+ img/)
 start.sh           start/stop w tle
 .env.example       przykładowa konfiguracja
+package.json       skrypty npm start / npm test (bez zależności)
 ```
