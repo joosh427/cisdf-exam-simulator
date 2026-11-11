@@ -49,16 +49,20 @@ test('pełny przebieg: nauka (check, blokada, reset) i egzamin (submit, przeglą
   const { call } = await startApp(t);
   await call('POST', '/api/login', { password: 'tajne' });
 
+  // odpowiedzi są losowane w każdym podejściu — szukamy pozycji „Right” w tym, co widzi przeglądarka
+  const pos = async (aid, text) => (await call('GET', `/api/attempts/${aid}`)).body.questions[0].options.indexOf(text);
+
   const { body: { id } } = await call('POST', '/api/attempts', { exam: 't1', mode: 'learn' });
-  const chk = await call('POST', `/api/attempts/${id}/check`, { qid: 't1:1', answer: [0] });
+  const chk = await call('POST', `/api/attempts/${id}/check`, { qid: 't1:1', answer: [await pos(id, 'Right')] });
   assert.deepEqual([chk.status, chk.body.ok], [200, true]);
-  assert.equal((await call('POST', `/api/attempts/${id}/answer`, { qid: 't1:1', answer: [1] })).status, 409);
+  assert.deepEqual(chk.body.correct, [await pos(id, 'Right')]);
+  assert.equal((await call('POST', `/api/attempts/${id}/answer`, { qid: 't1:1', answer: [await pos(id, 'Wrong')] })).status, 409);
   assert.equal((await call('POST', `/api/attempts/${id}/reset`)).status, 200);
   assert.deepEqual((await call('GET', `/api/attempts/${id}`)).body.answers, {});
 
   const ex = (await call('POST', '/api/attempts', { exam: 't1', mode: 'exam' })).body.id;
   assert.equal((await call('POST', `/api/attempts/${ex}/check`, { qid: 't1:1', answer: [0] })).status, 403);
-  await call('POST', `/api/attempts/${ex}/answer`, { qid: 't1:1', answer: [0] });
+  await call('POST', `/api/attempts/${ex}/answer`, { qid: 't1:1', answer: [await pos(ex, 'Right')] });
   const done = await call('POST', `/api/attempts/${ex}/submit`);
   assert.equal(done.body.score, 1);
   assert.equal(done.body.review.length, 3);

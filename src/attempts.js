@@ -4,7 +4,7 @@
  * w trybie nauki, reset, ocena, statystyki błędów. Nie wie nic o HTTP.
  */
 const crypto = require('crypto');
-const { isCorrect, feedback, publicQuestion } = require('./grading');
+const { localize, isCorrect, feedback, publicQuestion } = require('./grading');
 
 /** Tasowanie Fishera–Yatesa (kryptograficzny generator). */
 function shuffle(a) {
@@ -29,6 +29,8 @@ class AppError extends Error {
 function createAttemptService({ store, questions, config, now = Date.now }) {
   const { db, save } = store;
   const Q = () => questions().index;
+  /** Pytanie w kolejności odpowiedzi wylosowanej dla podejścia (null, gdy pytania już nie ma). */
+  const qOf = (a, id) => { const q = Q()[id]; return q ? localize(q, a) : null; };
 
   /** Ostatni wynik każdego pytania (po kluczu treści) ze wszystkich zakończonych podejść. */
   function lastResults() {
@@ -64,9 +66,14 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
     const a = {
       id: crypto.randomBytes(8).toString('hex'), exam: examId, title, started: t,
       deadline: t + config.durationMin * 60000, qids, answers: {}, flags: {}, rightOrder: {},
-      submitted: null, mode: mode === 'exam' ? 'exam' : 'learn', checked: {},
+      submitted: null, mode: mode === 'exam' ? 'exam' : 'learn', checked: {}, optOrder: {},
     };
-    qids.forEach(id => { const q = index[id]; if (q.type === 'matching') a.rightOrder[id] = shuffle(q.pairs.map(p => p[1])); });
+    // każde nowe podejście losuje kolejność: prawe strony matchingu i odpowiedzi single/multi
+    qids.forEach(id => {
+      const q = index[id];
+      if (q.type === 'matching') a.rightOrder[id] = shuffle(q.pairs.map(p => p[1]));
+      else a.optOrder[id] = shuffle(q.options.map((_, i) => i));
+    });
     db.attempts.push(a); save();
     return a;
   }
@@ -77,8 +84,7 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
   /** Ocenia podejście (idempotentnie) i zamyka je. */
   function grade(a) {
     if (a.submitted) return a;
-    const index = Q();
-    a.detail = a.qids.map(id => { const q = index[id]; return { qid: id, key: q ? q.key : '', ok: q ? isCorrect(q, a.answers[id]) : false }; });
+    a.detail = a.qids.map(id => { const q = qOf(a, id); return { qid: id, key: q ? q.key : '', ok: q ? isCorrect(q, a.answers[id]) : false }; });
     a.score = a.detail.filter(d => d.ok).length;
     a.total = a.qids.length;
     a.pct = a.total ? Math.round(1000 * a.score / a.total) / 10 : 0;
@@ -120,7 +126,7 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
     if (a.mode !== 'learn') throw new AppError(403, 'Tylko w trybie nauki');
     a.checked = a.checked || {};
     if (!a.checked[qid]) { if (ans != null) a.answers[qid] = ans; a.checked[qid] = true; save(); }
-    return feedback(Q()[qid], a.answers[qid]);
+    return feedback(qOf(a, qid), a.answers[qid]);
   }
 
   /** Tryb nauki: „Od początku” — czyści odpowiedzi, flagi i licznik czasu. */
@@ -152,19 +158,18 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
 
   /** Pełny widok podejścia: w trakcie bez klucza (poza zatwierdzonymi), po ocenie z kluczem. */
   function view(a) {
-    const index = Q();
     const base = summary(a);
     base.passPct = config.passPct;
     if (!a.submitted) {
       base.remainingMs = Math.max(0, a.deadline - now());
-      base.questions = a.qids.map(id => publicQuestion(index[id], a));
+      base.questions = a.qids.map(id => publicQuestion(qOf(a, id), a));
       base.answers = a.answers; base.flags = a.flags;
       base.checked = {};
-      Object.keys(a.checked || {}).forEach(id => { base.checked[id] = feedback(index[id], a.answers[id]); });
+      Object.keys(a.checked || {}).forEach(id => { base.checked[id] = feedback(qOf(a, id), a.answers[id]); });
       return base;
     }
     base.review = a.qids.map((id, i) => {
-      const q = index[id];
+      const q = qOf(a, id);
       const pq = publicQuestion(q, a);
       pq.your = a.answers[id] == null ? null : a.answers[id];
       pq.ok = a.detail[i].ok;

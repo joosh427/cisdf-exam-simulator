@@ -12,6 +12,24 @@
  */
 
 /**
+ * Pytanie w kolejności odpowiedzi wylosowanej dla danego podejścia.
+ * attempt.optOrder[qid] = permutacja: na pozycji i wyświetlana jest oryginalna opcja optOrder[i].
+ * Odpowiedzi użytkownika i klucz zwracany do przeglądarki są w tej (wyświetlanej) kolejności.
+ * Podejścia sprzed wprowadzenia losowania (bez optOrder) dostają pytanie bez zmian.
+ * @param {import('./questions').Question} q
+ * @param {{optOrder?: Object<string,number[]>}} attempt
+ * @returns {import('./questions').Question}
+ */
+function localize(q, attempt) {
+  const order = q && q.type !== 'matching' && attempt.optOrder && attempt.optOrder[q.qid];
+  if (!order) return q;
+  return Object.assign({}, q, {
+    options: order.map(j => q.options[j]),
+    correct: q.correct.map(c => order.indexOf(c)).sort((x, y) => x - y),
+  });
+}
+
+/**
  * Czy odpowiedź jest w pełni poprawna.
  * @param {import('./questions').Question} q
  * @param {Answer} ans
@@ -50,4 +68,4 @@ function publicQuestion(q, attempt) {
   return o;
 }
 
-module.exports = { isCorrect, feedback, publicQuestion };
+module.exports = { localize, isCorrect, feedback, publicQuestion };

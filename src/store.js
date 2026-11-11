@@ -19,6 +19,7 @@ const path = require('path');
  * @property {Object<string,boolean>} flags    pytania oznaczone ★
  * @property {Object<string,boolean>} checked  pytania zatwierdzone (tryb nauki)
  * @property {Object<string,string[]>} rightOrder  wylosowana kolejność prawych stron matchingu
+ * @property {Object<string,number[]>} [optOrder] wylosowana kolejność odpowiedzi single/multi (pozycja → indeks oryginalnej opcji)
  * @property {number|null} submitted
  * @property {{qid:string,key:string,ok:boolean}[]} [detail]  wynik per pytanie (po ocenie)
  * @property {number} [score] @property {number} [total] @property {number} [pct] @property {boolean} [passed]

@@ -17,7 +17,16 @@ function setup(t) {
   const qs = loadQuestions(dirs.questionsDir);
   const store = openStore(dirs.dataDir);
   const svc = createAttemptService({ store, questions: () => qs, config, now: clock.now });
-  return { svc, store, clock, config, dirs };
+  return { svc: { ...svc, create: (...x) => unshuffle(svc.create(...x)) }, raw: svc, store, clock, config, dirs };
+}
+
+/**
+ * Większość testów odpowiada indeksami z pliku pytań, więc przywraca oryginalną kolejność opcji.
+ * Samo losowanie sprawdzają osobne testy (na `raw`, bez tej podmiany).
+ */
+function unshuffle(a) {
+  if (a) for (const id of Object.keys(a.optOrder)) a.optOrder[id] = a.optOrder[id].map((_, i) => i);
+  return a;
 }
 
 const ALL_RIGHT = { 't1:1': [0], 't1:2': [0, 2], 't1:3': ['R1', 'R2'] };
@@ -181,4 +190,37 @@ test('remove: usuwa podejście z bazy', t => {
   svc.remove(a);
   assert.equal(store.db.attempts.length, 0);
   assert.equal(svc.find(a.id), null);
+});
+
+test('losowanie: każde podejście ma własną permutację odpowiedzi single/multi', t => {
+  const { raw } = setup(t);
+  const a = raw.create('t1', 'exam');
+  assert.deepEqual(Object.keys(a.optOrder), ['t1:1', 't1:2'], 'matching losuje osobno (rightOrder)');
+  assert.deepEqual([...a.optOrder['t1:2']].sort(), [0, 1, 2]);
+  // przy 3 opcjach (6 permutacji) 30 podejść z jedną kolejnością byłoby przypadkiem ~1e-23
+  const orders = new Set(Array.from({ length: 30 }, () => raw.create('t1', 'exam').optOrder['t1:2'].join()));
+  assert.ok(orders.size > 1, 'kolejność się zmienia między podejściami');
+});
+
+test('losowanie: widok, ocena i klucz działają w wyświetlanej kolejności', t => {
+  const { raw } = setup(t);
+  const a = raw.create('t1', 'learn');
+  a.optOrder['t1:2'] = [2, 0, 1];                 // wyświetlane: C, A, B
+  const v = raw.view(a).questions.find(q => q.qid === 't1:2');
+  assert.deepEqual(v.options, ['C', 'A', 'B']);
+  const f = raw.check(a, { qid: 't1:2', answer: [0, 1] }); // C + A = poprawne (A, C)
+  assert.equal(f.ok, true);
+  assert.deepEqual(f.correct, [0, 1], 'klucz w wyświetlanych pozycjach');
+  raw.grade(a);
+  assert.equal(a.detail.find(d => d.qid === 't1:2').ok, true);
+  assert.deepEqual(raw.view(a).review.find(q => q.qid === 't1:2').correct, [0, 1]);
+});
+
+test('losowanie: stare podejścia bez optOrder działają jak wcześniej', t => {
+  const { raw } = setup(t);
+  const a = raw.create('t1', 'exam');
+  delete a.optOrder;
+  raw.answer(a, { qid: 't1:1', answer: [0] });
+  raw.grade(a);
+  assert.equal(a.detail[0].ok, true);
 });
