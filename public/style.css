@@ -66,3 +66,11 @@ th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;lett
 .sumtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
 .sumtiles div{border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
 .sumtiles b{display:block;font-size:24px}
+/* wynik per domena (jak w raporcie po egzaminie) */
+.dom{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+.dom th{text-align:left;font-weight:600;color:var(--mut);font-size:12px;padding:4px 8px;border-bottom:1px solid var(--line)}
+.dom td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.dom td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dom .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;min-width:80px}
+.dom .bar i{display:block;height:100%}
+.dom .ok{color:var(--ok)}.dom .warn{color:var(--warn)}.dom .bad{color:var(--bad)}

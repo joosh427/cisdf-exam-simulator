@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { normalize, loadDomainMap } = require('./domains');
 
 /**
  * @typedef {object} RawQuestion
@@ -81,6 +82,7 @@ function parseExam(text) {
  * @property {string} expl     wyjaśnienie
  * @property {string} comment  dodatkowa uwaga z parametrów
  * @property {string} key      skrót treści — wiąże statystyki z pytaniem niezależnie od numeracji
+ * @property {string|null} domain  domena egzaminu (parametr {"domain"} albo questions/domains.json)
  * @property {'single'|'multi'|'matching'} type
  * @property {string[]} [options]   (single/multi)
  * @property {number[]} [correct]   indeksy poprawnych (single/multi)
@@ -99,7 +101,7 @@ function toQuestion(q, examId, i) {
   const matching = q.params.type === 'matching' || q.answers.some(a => a.ok && a.name.includes('=='));
   const base = {
     qid: examId + ':' + (i + 1), exam: examId, n: i + 1, stem,
-    expl: q.expl.join('\n'), comment: q.params.comment || '',
+    expl: q.expl.join('\n'), comment: q.params.comment || '', domain: normalize(q.params.domain),
     key: crypto.createHash('sha1')
       .update(stem + '\n' + q.answers.map(a => (a.ok ? '+' : '-') + a.name).join('\n'))
       .digest('hex').slice(0, 12),
@@ -125,20 +127,21 @@ function toQuestion(q, examId, i) {
  */
 
 /**
- * Wczytuje wszystkie arkusze *.md z katalogu.
+ * Wczytuje wszystkie arkusze *.md z katalogu (+ opcjonalnie domains.json z domenami pytań).
  * Id arkusza = nazwa pliku bez rozszerzenia i bez prefiksu "cis_df_".
  * @param {string} dir
  * @returns {{exams: Object<string,Exam>, index: Object<string,Question>}}
  */
 function loadQuestions(dir) {
   const exams = {}, index = {};
+  const domainMap = loadDomainMap(dir);
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort();
   for (const f of files) {
     const id = f.replace(/^cis_df_/, '').replace(/\.md$/, '');
     const { cfg, qs } = parseExam(fs.readFileSync(path.join(dir, f), 'utf8'));
     const questions = qs.map((q, i) => toQuestion(q, id, i));
     exams[id] = { id, file: f, title: cfg.exam || id, desc: cfg.description || '', questions };
-    questions.forEach(q => { index[q.qid] = q; });
+    questions.forEach(q => { q.domain = q.domain || normalize(domainMap[q.key] || domainMap[q.qid]); index[q.qid] = q; });
   }
   return { exams, index };
 }

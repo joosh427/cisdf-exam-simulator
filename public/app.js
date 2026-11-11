@@ -204,10 +204,26 @@ function showResult(a) {
     <div><span class="pill ${a.passed ? 'ok' : 'bad'}">${a.passed ? 'ZALICZONE' : 'NIEZALICZONE'}</span> ${a.score}/${a.total} poprawnych · próg ${a.passPct}%</div></div>
     <span class="spacer"></span><label class="row"><input type="checkbox" id="onlybad" checked> tylko błędne (${bad.length})</label>
     <button onclick="start('${a.exam}')">Jeszcze raz</button></div>
+    ${domainTable(a)}
     <div class="nav" style="grid-template-columns:repeat(auto-fill,minmax(36px,1fr));margin-top:12px">${a.review.map((q, i) => `<button class="${q.ok ? 'r-ok' : 'r-bad'}" onclick="document.getElementById('q${i}').scrollIntoView({behavior:'smooth'})">${i+1}</button>`).join('')}</div></div>
   <div id="rev">${a.review.map((q, i) => reviewCard(q, i)).join('')}</div>`;
   const apply = () => { const only = $('#onlybad').checked; app.querySelectorAll('[data-ok]').forEach(c => c.classList.toggle('hidden', only && c.dataset.ok === '1')); };
   $('#onlybad').onchange = apply; apply();
+}
+
+// Wynik per domena, jak w raporcie po egzaminie: zielony ≥ próg, pomarańczowy 60–próg, czerwony < 60%.
+// Waga = udział domeny w egzaminie (blueprint) — słaba domena o dużej wadze kosztuje najwięcej punktów.
+function domainTable(a) {
+  const ds = a.domains || [];
+  if (!ds.length || (ds.length === 1 && ds[0].weight == null)) return '';
+  const cls = p => p >= a.passPct ? 'ok' : (p >= 60 ? 'warn' : 'bad');
+  const col = { ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)' };
+  const weakest = ds.filter(d => d.weight != null).sort((x, y) => x.pct - y.pct || y.weight - x.weight)[0];
+  return `<table class="dom"><tr><th>Domena</th><th>Waga</th><th style="width:40%"></th><th style="text-align:right">Wynik</th></tr>
+    ${ds.map(d => `<tr><td>${esc(d.domain)}</td><td class="mut">${d.weight != null ? d.weight + '%' : '—'}</td>
+      <td><div class="bar"><i style="width:${d.pct}%;background:${col[cls(d.pct)]}"></i></div></td>
+      <td class="n ${cls(d.pct)}"><b>${d.pct}%</b> <span class="mut">(${d.ok}/${d.total})</span></td></tr>`).join('')}</table>
+    ${weakest && weakest.pct < a.passPct ? `<div class="mut" style="margin-top:6px">Najsłabiej: <b>${esc(weakest.domain)}</b> — od niej zacznij powtórkę.</div>` : ''}`;
 }
 
 function reviewCard(q, i) {
@@ -220,7 +236,7 @@ function reviewCard(q, i) {
       const cls = c ? 'r-ok' : (y ? 'r-bad' : '');
       return `<div class="opt ${cls}" style="cursor:default"><span>${c ? '✓' : (y ? '✗' : '·')}</span><span>${esc(o)}${y ? ' <span class="mut">(Twoja)</span>' : ''}</span></div>`; }).join('');
   }
-  return `<div class="card" id="q${i}" data-ok="${q.ok ? 1 : 0}"><div class="row"><b>${i+1}.</b><span class="pill ${q.ok ? 'ok' : 'bad'}">${q.ok ? 'dobrze' : (q.your == null ? 'brak odpowiedzi' : 'źle')}</span><span class="spacer"></span><span class="tag">${q.src}</span></div>
+  return `<div class="card" id="q${i}" data-ok="${q.ok ? 1 : 0}"><div class="row"><b>${i+1}.</b><span class="pill ${q.ok ? 'ok' : 'bad'}">${q.ok ? 'dobrze' : (q.your == null ? 'brak odpowiedzi' : 'źle')}</span><span class="spacer"></span>${q.domain ? `<span class="tag">${esc(q.domain)}</span> · ` : ''}<span class="tag">${q.src}</span></div>
     <p class="stem">${stemHtml(q.stem)}</p>${body}
     ${q.expl ? `<div class="expl">${esc(q.expl)}</div>` : ''}${q.comment ? `<div class="expl">Uwaga: ${esc(q.comment)}</div>` : ''}</div>`;
 }

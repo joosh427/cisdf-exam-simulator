@@ -2,6 +2,7 @@
 # description: 4 przykładowe pytania pokazujące format LearnWise (jednokrotny, wielokrotny wybór, matching)
 
 Which CMDB feature decides which data source is allowed to overwrite a CI attribute?
+{"domain": "Configuration"}
 + Reconciliation Rules
 - Identification Rules
 - De-duplication Templates
@@ -9,6 +10,7 @@ Which CMDB feature decides which data source is allowed to overwrite a CI attrib
 > Reconciliation Rules nadają źródłom danych priorytet dla klasy lub atrybutu. Identyfikacja tylko odnajduje CI.
 
 Which three KPIs are shown on the CMDB Health Dashboard? (Choose 3)
+{"domain": "Govern"}
 + Completeness
 + Correctness
 + Compliance
@@ -17,6 +19,7 @@ Which three KPIs are shown on the CMDB Health Dashboard? (Choose 3)
 > Trzy karty na C: Completeness (pola wypełnione), Correctness (duplikaty, orphany, stale), Compliance (audyty).
 
 A Data Manager policy must allow records to be restored within a set period. Which policy type fits?
+{"domain": "Govern"}
 - Delete
 + Archive
 - Retire
@@ -24,7 +27,7 @@ A Data Manager policy must allow records to be restored within a set period. Whi
 > Archive przenosi rekordy do archiwum z możliwością przywrócenia. Delete usuwa trwale.
 
 Match each tool to its purpose.
-{"type": "matching"}
+{"type": "matching", "domain": "Insight"}
 + Unified Map == Visual view of a CI, its relationships and related incidents
 + CMDB Query Builder == Building queries and scheduled reports across CI classes
 + Duplicate CI Remediator == Guided wizard to merge one pair of duplicate CIs

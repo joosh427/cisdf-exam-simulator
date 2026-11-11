@@ -5,6 +5,7 @@
  */
 const crypto = require('crypto');
 const { localize, isCorrect, feedback, publicQuestion } = require('./grading');
+const { breakdown } = require('./domains');
 
 /** Tasowanie Fishera–Yatesa (kryptograficzny generator). */
 function shuffle(a) {
@@ -176,12 +177,13 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
       Object.keys(a.checked || {}).forEach(id => { base.checked[id] = feedback(qOf(a, id), a.answers[id]); });
       return base;
     }
+    base.domains = breakdown(a.detail, id => { const q = Q()[id]; return q ? q.domain : null; });
     base.review = a.qids.map((id, i) => {
       const q = qOf(a, id);
       const pq = publicQuestion(q, a);
       pq.your = a.answers[id] == null ? null : a.answers[id];
       pq.ok = a.detail[i].ok;
-      pq.expl = q.expl; pq.comment = q.comment;
+      pq.expl = q.expl; pq.comment = q.comment; pq.domain = q.domain || null;
       if (q.type === 'matching') pq.correctPairs = q.pairs.map(p => p[1]); else pq.correct = q.correct;
       return pq;
     });

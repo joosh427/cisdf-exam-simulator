@@ -13,6 +13,7 @@ Node.js bez żadnych zależności i jedna strona HTML — bez `npm install`, bez
   - **Egzamin** — jak na prawdziwym egzaminie, wynik dopiero na końcu.
 - **Przegląd przed zakończeniem** — plansza wszystkich numerów pytań (dobrze / źle / z odpowiedzią / bez odpowiedzi / ★ oznaczone), klik przenosi do pytania.
 - **Losowa kolejność odpowiedzi** — każde nowe podejście (także powtórka błędów) i każde „↺ Od początku” tasuje odpowiedzi i prawe strony matchingu, więc nie da się zapamiętać „to była trzecia”. Kolejność jest stała w obrębie jednego podejścia.
+- **Wynik per domena** po zakończeniu (Configuration, Ingest, Govern, Insight, CSDM Fundamentals) z wagami z blueprintu i wskazaniem najsłabszej domeny — jak w raporcie po prawdziwym egzaminie. Domena widoczna też przy każdym pytaniu w przeglądzie.
 - **Ocena jak na egzaminie** — pytanie wielokrotnego wyboru i matching liczą się tylko przy w pełni poprawnej odpowiedzi.
 - Odpowiedzi zapisują się na serwerze na bieżąco (odświeżenie strony ani zmiana urządzenia niczego nie psują).
 - **Po egzaminie**: przegląd z filtrem „tylko błędne”, historia podejść, czas i tempo (średnio na pytanie, „w tempie / za wolno”).
@@ -53,6 +54,15 @@ Dopasuj elementy
 Więcej odpowiedzi z `+` = pytanie wielokrotnego wyboru. Obrazki wrzuć do `questions/img/`.
 W repo jest tylko `questions/cis_df_przyklad.md` z kilkoma przykładowymi pytaniami — własne arkusze dodaj obok i zrestartuj serwer.
 
+### Domeny pytań
+
+Wynik per domena wymaga przypisania domeny do pytania — na dwa sposoby (pierwszy wygrywa):
+
+1. parametr w pliku pytania, w linii JSON po treści: `{"domain": "Ingest"}` (można łączyć z `"type": "matching"`),
+2. plik `questions/domains.json` — mapa `"arkusz:numer"` (np. `"final-03:12"`) albo skrót treści pytania → domena.
+
+Nazwy: `Configuration`, `Ingest`, `Govern`, `Insight`, `CSDM Fundamentals` (`CSDM` też zadziała). Pytania bez domeny trafiają do grupy „Bez domeny”. Po zmianie plików: przycisk przeładowania pytań albo `POST /api/reload`.
+
 ## Architektura
 
 Kod jest podzielony na warstwy — każda zna tylko te pod sobą, a logika biznesowa nie wie nic o HTTP:
@@ -82,6 +92,7 @@ Kod jest podzielony na warstwy — każda zna tylko te pod sobą, a logika bizne
 | `src/attempts.js` | tworzenie podejść, odpowiedzi, Zatwierdź (nauka), reset, ocena, limit czasu, powtórka błędów, statystyki |
 | `src/grading.js` | czy odpowiedź jest poprawna, feedback, pytanie bez klucza dla przeglądarki |
 | `src/questions.js` | parser formatu LearnWise i wczytywanie arkuszy |
+| `src/domains.js` | domeny egzaminu z wagami, wczytanie `domains.json`, wynik per domena |
 | `src/store.js` | baza w jednym pliku JSON z atomowym zapisem |
 | `public/index.html` · `style.css` · `app.js` | interfejs (vanilla JS, bez frameworka) |
 
@@ -98,6 +109,7 @@ npm test        # = node --test test/*.test.js   (wbudowany runner Node.js, zero
 | `test/questions.test.js` | parser: konfiguracja, odpowiedzi, JSON, wielolinijkowa treść, typy pytań, klucz treści |
 | `test/grading.test.js` | ocena single / multi / matching, feedback, brak klucza w danych dla przeglądarki |
 | `test/attempts.test.js` | tryby nauka / egzamin, Zatwierdź i blokada zmiany, reset, limit czasu (sterowany zegar), powtórka błędów, statystyki |
+| `test/domains.test.js` | domeny: parametr i `domains.json`, kolejność i procenty w wyniku per domena |
 | `test/http.test.js` | end-to-end: prawdziwy serwer na losowym porcie, logowanie, pełny przebieg podejścia, kody błędów |
 
 Testy działają na tymczasowych katalogach — nie dotykają `data/` ani Twoich pytań.
