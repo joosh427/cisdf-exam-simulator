@@ -12,7 +12,7 @@ Node.js bez żadnych zależności i jedna strona HTML — bez `npm install`, bez
   - **Nauka** — zaznaczasz odpowiedź, klikasz **Zatwierdź** i od razu widzisz: zielone (dobrze), czerwone (źle), przerywana ramka (pominięta poprawna) + wyjaśnienie. Licznik ✓/✗, przycisk „↺ Od początku”.
   - **Egzamin** — jak na prawdziwym egzaminie, wynik dopiero na końcu.
 - **Przegląd przed zakończeniem** — plansza wszystkich numerów pytań (dobrze / źle / z odpowiedzią / bez odpowiedzi / ★ oznaczone), klik przenosi do pytania.
-- **Losowa kolejność odpowiedzi** — każde nowe podejście (także „Od początku” w nowym podejściu i powtórka błędów) tasuje odpowiedzi i prawe strony matchingu, więc nie da się zapamiętać „to była trzecia”. Kolejność jest stała w obrębie jednego podejścia.
+- **Losowa kolejność odpowiedzi** — każde nowe podejście (także powtórka błędów) i każde „↺ Od początku” tasuje odpowiedzi i prawe strony matchingu, więc nie da się zapamiętać „to była trzecia”. Kolejność jest stała w obrębie jednego podejścia.
 - **Ocena jak na egzaminie** — pytanie wielokrotnego wyboru i matching liczą się tylko przy w pełni poprawnej odpowiedzi.
 - Odpowiedzi zapisują się na serwerze na bieżąco (odświeżenie strony ani zmiana urządzenia niczego nie psują).
 - **Po egzaminie**: przegląd z filtrem „tylko błędne”, historia podejść, czas i tempo (średnio na pytanie, „w tempie / za wolno”).

@@ -224,3 +224,12 @@ test('losowanie: stare podejścia bez optOrder działają jak wcześniej', t => 
   raw.grade(a);
   assert.equal(a.detail[0].ok, true);
 });
+
+test('losowanie: „Od początku” losuje kolejność od nowa', t => {
+  const { raw } = setup(t);
+  const a = raw.create('t1', 'learn');
+  const seen = new Set();
+  for (let i = 0; i < 30; i++) { raw.reset(a); seen.add(a.optOrder['t1:2'].join()); }
+  assert.ok(seen.size > 1);
+  assert.deepEqual([...a.optOrder['t1:2']].sort(), [0, 1, 2]);
+});

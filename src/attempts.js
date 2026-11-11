@@ -68,14 +68,21 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
       deadline: t + config.durationMin * 60000, qids, answers: {}, flags: {}, rightOrder: {},
       submitted: null, mode: mode === 'exam' ? 'exam' : 'learn', checked: {}, optOrder: {},
     };
-    // każde nowe podejście losuje kolejność: prawe strony matchingu i odpowiedzi single/multi
-    qids.forEach(id => {
+    randomizeOrder(a);
+    db.attempts.push(a); save();
+    return a;
+  }
+
+  /** Losuje kolejność: prawe strony matchingu i odpowiedzi single/multi (nowe podejście i „Od początku”). */
+  function randomizeOrder(a) {
+    const index = Q();
+    a.rightOrder = {}; a.optOrder = {};
+    a.qids.forEach(id => {
       const q = index[id];
+      if (!q) return;
       if (q.type === 'matching') a.rightOrder[id] = shuffle(q.pairs.map(p => p[1]));
       else a.optOrder[id] = shuffle(q.options.map((_, i) => i));
     });
-    db.attempts.push(a); save();
-    return a;
   }
 
   /** @param {string} id */
@@ -129,12 +136,13 @@ function createAttemptService({ store, questions, config, now = Date.now }) {
     return feedback(qOf(a, qid), a.answers[qid]);
   }
 
-  /** Tryb nauki: „Od początku” — czyści odpowiedzi, flagi i licznik czasu. */
+  /** Tryb nauki: „Od początku” — czyści odpowiedzi, flagi i licznik czasu oraz losuje kolejność od nowa. */
   function reset(a) {
     assertOpen(a);
     if (a.mode !== 'learn') throw new AppError(403, 'Tylko w trybie nauki');
     const t = now();
     a.answers = {}; a.checked = {}; a.flags = {}; a.started = t; a.deadline = t + config.durationMin * 60000;
+    randomizeOrder(a);
     save();
     return { ok: true };
   }
